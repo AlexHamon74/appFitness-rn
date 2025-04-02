@@ -1,11 +1,26 @@
-import React, { useState } from "react";
-import { Alert, Button, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useState, useEffect } from "react";
+import { Button, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 export default function Index() {
     const [nbSeries, setNbSeries] = useState(0);
     const [nbRepetitions, setNbRepetitions] = useState(0);
     const [exerciseName, setExerciseName] = useState("");
     const [restTime, setRestTime] = useState("");
+    const [modalVisible, setModalVisible] = useState(false);
+    const [timer, setTimer] = useState(0);
+    const [isTimerRunning, setIsTimerRunning] = useState(false);
+
+    useEffect(() => {
+        let interval: NodeJS.Timeout | null = null;
+        if (isTimerRunning) {
+            interval = setInterval(() => {
+                setTimer((prev) => prev + 1);
+            }, 1000);
+        } else if (!isTimerRunning && timer !== 0) {
+            clearInterval(interval!);
+        }
+        return () => clearInterval(interval!);
+    }, [isTimerRunning]);
 
     const moinsSeries = () => {
         setNbSeries((prev) => Math.max(0, prev - 1));
@@ -23,18 +38,24 @@ export default function Index() {
         setNbRepetitions((prev) => prev + 1);
     };
 
-    const handleStartChrono = () => {
-        Alert.alert(
-            "Données de l'exercice",
-            `Nom de l'exercice: ${exerciseName}\nNombre de séries: ${nbSeries}\nNombre de répétitions: ${nbRepetitions}\nTemps de repos: ${restTime}`
-        );
+    const openModal = () => {
+        setModalVisible(true);
     };
 
-    const handleReset = () => {
+    const dataReset = () => {
         setNbSeries(0);
         setNbRepetitions(0);
         setExerciseName("");
         setRestTime("");
+    };
+
+    const startTimer = () => {
+        setIsTimerRunning(true);
+    };
+
+    const stopTimer = () => {
+        setIsTimerRunning(false);
+        setTimer(0);
     };
 
     return (
@@ -88,16 +109,50 @@ export default function Index() {
                     title="Reset"
                     accessibilityLabel="Réinitialiser les champs"
                     color={"red"}
-                    onPress={handleReset}
+                    onPress={dataReset}
                 />
                 {/* Bouton Start chrono */}
                 <Button
                     title="Lancer le chrono"
                     accessibilityLabel="Lancer le chrono"
                     color={"blue"}
-                    onPress={handleStartChrono}
+                    onPress={openModal}
                 />
             </View>
+
+            {/* Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={() => setModalVisible(false)}
+            >
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Données de l'exercice</Text>
+                        <Text>Nom de l'exercice: {exerciseName}</Text>
+                        <Text>Nombre de séries: {nbSeries}</Text>
+                        <Text>Nombre de répétitions: {nbRepetitions}</Text>
+                        <Text>Temps de repos: {restTime}</Text>
+                        <Text>Chronomètre: {timer} secondes</Text>
+                        <View style={styles.row}>
+                            <Button
+                                title="Fermer"
+                                onPress={() => {
+                                    setModalVisible(false);
+                                    stopTimer();
+                                }}
+                                color={"blue"}
+                            />
+                            <Button
+                                title="Lancer"
+                                onPress={startTimer}
+                                color={"green"}
+                            />
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -109,4 +164,7 @@ const styles = StyleSheet.create({
     label: { marginBottom: 5 },
     row: { flexDirection: "row", justifyContent: "center", gap: 50, alignItems: "center", backgroundColor: "white", borderWidth: 1, borderRadius: 100, padding: 2, marginBottom: 20 },
     number: { fontSize: 20, fontWeight: "bold", marginBottom: 5, padding: 5 },
+    modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0, 0, 0, 0.5)" },
+    modalContent: { backgroundColor: "white", padding: 20, borderRadius: 10, width: "80%", alignItems: "center" },
+    modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
 });
