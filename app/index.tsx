@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Button, Modal, Pressable, StyleSheet, Text, TextInput, View, Keyboard, TouchableWithoutFeedback } from "react-native";
+import { Button, Modal, Pressable, StyleSheet, Text, TextInput, View, Keyboard, TouchableWithoutFeedback, Alert } from "react-native";
 
 export default function Index() {
     const [nbSeries, setNbSeries] = useState(0);
@@ -9,6 +9,8 @@ export default function Index() {
     const [modalVisible, setModalVisible] = useState(false);
     const [timer, setTimer] = useState(0);
     const [isTimerRunning, setIsTimerRunning] = useState(false);
+    const [currentSeries, setCurrentSeries] = useState(0);
+    const [isResting, setIsResting] = useState(false);
 
     useEffect(() => {
         let interval: NodeJS.Timeout | null = null;
@@ -21,6 +23,34 @@ export default function Index() {
         }
         return () => clearInterval(interval!);
     }, [isTimerRunning]);
+
+    useEffect(() => {
+        if (isTimerRunning && currentSeries > 0) {
+            let interval: NodeJS.Timeout | null = null;
+            interval = setInterval(() => {
+                setTimer((prev) => prev + 1);
+                setNbRepetitions((prev) => Math.max(0, prev - 1)); // Decrement repetitions
+            }, 1000);
+
+            if (!isResting && timer >= nbRepetitions) {
+                if (currentSeries < nbSeries) {
+                    setIsResting(true);
+                    setTimer(0);
+                } else {
+                    clearInterval(interval);
+                    setIsTimerRunning(false);
+                    setModalVisible(false);
+                    Alert.alert("Bravo !");
+                }
+            } else if (isResting && timer >= parseInt(restTime)) {
+                setIsResting(false);
+                setTimer(0);
+                setCurrentSeries((prev) => prev + 1);
+            }
+
+            return () => clearInterval(interval);
+        }
+    }, [isTimerRunning, timer, isResting, currentSeries]);
 
     const moinsSeries = () => {
         setNbSeries((prev) => Math.max(0, prev - 1));
@@ -49,13 +79,18 @@ export default function Index() {
         setRestTime("");
     };
 
-    const startTimer = () => {
+    const startExercise = () => {
+        setCurrentSeries(1);
         setIsTimerRunning(true);
+        setIsResting(false);
+        setTimer(0);
     };
 
-    const stopTimer = () => {
+    const stopExercise = () => {
         setIsTimerRunning(false);
         setTimer(0);
+        setCurrentSeries(0);
+        setIsResting(false);
     };
 
     return (
@@ -115,9 +150,9 @@ export default function Index() {
                     />
                     {/* Bouton Start chrono */}
                     <Button
-                        title="Lancer le chrono"
-                        accessibilityLabel="Lancer le chrono"
-                        color={"green"}
+                        title="Lancer l'exercice"
+                        accessibilityLabel="Lancer l'exercice"
+                        color={"blue"}
                         onPress={openModal}
                     />
                 </View>
@@ -129,26 +164,33 @@ export default function Index() {
                     visible={modalVisible}
                     onRequestClose={() => setModalVisible(false)}
                 >
-                    <View style={styles.modalContainer}>
+                    <View
+                        style={[
+                            styles.modalContainer,
+                            { backgroundColor: isResting ? "green" : "orange" },
+                        ]}
+                    >
                         <View style={styles.modalContent}>
-                            <Text style={styles.modalTitle}>Exercice en cours</Text>
-                            <Text>Nom de l'exercice: {exerciseName}</Text>
-                            <Text>Nombre de séries: {nbSeries}</Text>
-                            <Text>Nombre de répétitions: {nbRepetitions}</Text>
-                            <Text>Temps de repos: {restTime}</Text>
+                            <Text style={styles.modalTitle}>{exerciseName ? exerciseName : "Exercice en cours"}</Text>
+                            <Text>{nbRepetitions} Réps</Text>
+                            <Text>{restTime}s de repos</Text>
+                            <Text>Série {currentSeries}/{nbSeries}</Text>
                             <Text style={styles.chrono}>{timer}s</Text>
+                            <Text style={styles.statusText}>
+                                {isResting ? "Pause" : "Go"}
+                            </Text>
                             <View style={styles.row}>
                                 <Button
                                     title="Fermer"
                                     onPress={() => {
                                         setModalVisible(false);
-                                        stopTimer();
+                                        stopExercise();
                                     }}
                                     color={"red"}
                                 />
                                 <Button
                                     title="Lancer"
-                                    onPress={startTimer}
+                                    onPress={startExercise}
                                     color={"green"}
                                 />
                             </View>
@@ -171,4 +213,5 @@ const styles = StyleSheet.create({
     modalContent: { backgroundColor: "white", padding: 20, borderRadius: 10, width: "80%", alignItems: "center" },
     modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
     chrono: { fontSize: 20, fontWeight: "bold", marginBottom: 20, marginTop: 20 },
+    statusText: { fontSize: 24, fontWeight: "bold", marginVertical: 10 },
 });
