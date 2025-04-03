@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal, StyleSheet, Text, TextInput, View, Alert, Keyboard, TouchableWithoutFeedback, TouchableOpacity } from "react-native";
+import { Audio } from "expo-av";
+
 
 export default function TimerParam({ route }: { route?: any }) {
     const exerciseName = route?.params?.exerciseName || "Exercice";
@@ -16,6 +18,13 @@ export default function TimerParam({ route }: { route?: any }) {
 
     const isFormValid = nbSeries && nbRepetitions && repetitionTime && restTime;
 
+    const playBeepSound = async () => {
+        const { sound } = await Audio.Sound.createAsync(
+            require("../assets/beep.mp3")
+        );
+        await sound.playAsync();
+    };
+
     useEffect(() => {
         let interval: NodeJS.Timeout | null = null;
         if (isTimerRunning && timer > 0) {
@@ -24,9 +33,10 @@ export default function TimerParam({ route }: { route?: any }) {
             }, 1000);
         } else if (timer === 0 && isTimerRunning) {
             if (!isResting) {
-                if (remainingReps > 1) {
-                    setRemainingReps((prev) => prev - 1);
+                if (remainingReps > 0) {
+                    playBeepSound();
                     setTimer(parseInt(repetitionTime));
+                    setRemainingReps((prev) => prev - 1);
                 } else if (currentSeries < parseInt(nbSeries)) {
                     setIsResting(true);
                     setTimer(parseInt(restTime));
