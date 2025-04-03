@@ -25,6 +25,40 @@ export default function TimerParam({ route }: { route?: any }) {
         await sound.playAsync();
     };
 
+    const playReadySound = async () => {
+        const { sound } = await Audio.Sound.createAsync(
+            require("../assets/ready.mp3")
+        );
+        await sound.playAsync();
+    };
+
+    const startCountdown = async () => {
+        playReadySound(); // Play the sound immediately when the countdown starts
+        for (let i = 3; i > 0; i--) {
+            setTimer(i); // Display the countdown
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+        setTimer(-1); // Set to -1 to indicate "Go!" should be displayed
+        await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second before starting the exercise
+        startExercise();
+    };
+
+    const startExercise = () => {
+        setCurrentSeries(1);
+        setIsResting(false);
+        setRemainingReps(parseInt(nbRepetitions));
+        setTimer(parseInt(repetitionTime));
+        setIsTimerRunning(true);
+    };
+
+    const stopExercise = () => {
+        setIsTimerRunning(false);
+        setTimer(0);
+        setCurrentSeries(0);
+        setRemainingReps(0);
+        setIsResting(false);
+    };
+
     useEffect(() => {
         let interval: NodeJS.Timeout | null = null;
         if (isTimerRunning && timer > 0) {
@@ -54,22 +88,6 @@ export default function TimerParam({ route }: { route?: any }) {
         }
         return () => clearInterval(interval!);
     }, [isTimerRunning, timer, isResting, remainingReps, currentSeries]);
-
-    const startExercise = () => {
-        setCurrentSeries(1);
-        setIsResting(false);
-        setRemainingReps(parseInt(nbRepetitions));
-        setTimer(parseInt(repetitionTime));
-        setIsTimerRunning(true);
-    };
-
-    const stopExercise = () => {
-        setIsTimerRunning(false);
-        setTimer(0);
-        setCurrentSeries(0);
-        setRemainingReps(0);
-        setIsResting(false);
-    };
 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -146,7 +164,15 @@ export default function TimerParam({ route }: { route?: any }) {
                                     <Text style={styles.modalTimerRep}>{remainingReps} répétitions restantes</Text>
                                 )
                             ) : (
-                                <Text style={styles.modalReady}>Ready?</Text>
+                                <>
+                                    <Text style={styles.modalReady}>Ready?</Text>
+                                    {!isTimerRunning && timer > 0 && (
+                                        <Text style={styles.modalCountdown}>{timer}</Text>
+                                    )}
+                                    {!isTimerRunning && timer === -1 && (
+                                        <Text style={styles.modalCountdown}>Go!</Text>
+                                    )}
+                                </>
                             )}
 
                             <Text style={styles.modalStatus}>
@@ -166,7 +192,7 @@ export default function TimerParam({ route }: { route?: any }) {
                                 {!isTimerRunning && (
                                     <TouchableOpacity
                                         style={[styles.modalButton, styles.startButton]}
-                                        onPress={startExercise}
+                                        onPress={startCountdown}
                                     >
                                         <Text style={styles.modalButtonText}>Start</Text>
                                     </TouchableOpacity>
@@ -240,6 +266,13 @@ const styles = StyleSheet.create({
     modalTimer: { fontSize: 50, fontWeight: "bold", color: "#000", marginBottom: 20, textAlign: "center" },
     modalTimerRep: { fontSize: 30, fontWeight: "bold", color: "#000", marginBottom: 20, textAlign: "center" },
     modalReady: { fontSize: 40, fontWeight: "bold", color: "#000", marginBottom: 20, textAlign: "center" },
+    modalCountdown: {
+        fontSize: 40,
+        fontWeight: "bold",
+        color: "#000",
+        marginBottom: 20,
+        textAlign: "center",
+    },
     modalStatus: { fontSize: 24, fontWeight: "bold", color: "#333", marginBottom: 30, textAlign: "center" },
     modalButtons: {
         flexDirection: "row",
